@@ -1,7 +1,7 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
+import torch.nn as nn # All the modules lile Conv2d, Linear, BatchNorm, Lossfunctions
+import torch.optim as optim # Optimizers like Adam, SGD
+import torch.nn.functional as F # All the layers without parameters, relu, tanh
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
