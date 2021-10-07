@@ -20,46 +20,32 @@ learning_rate = 1e-3
 batch_size = 64
 num_epochs = 2
 
-# create a RNN
-class RNN(nn.Module):
+# create a bi-directional LSTM
+class BiLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
-        super(RNN, self).__init__()
-        self.hidden_size = hidden_size #number of nodes in hidden layer
-        self.num_layers = num_layers # number of hidden layers
-        # we need not explicitly mention the sequence length while initialization
-        # similar to RNN we can use GRU and LSTM with similar syntax
-        # self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
-        #self.lstm = nn.LSTM(nput_size, hidden_size, num_layers, batch_first=True)
-        # These changes are shown in the bidirectionalLSTM.py python script
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        # information is taken form all the hidden states
-        self.fc = nn.Linear(hidden_size*sequence_length, num_classes)
+        super(BiLSTM, self).init()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True,
+        bidirectional=True)
+        self.fc = self.Linear(hidden_size*2, num_classes)
     
     def forward(self, x):
-        # initalizig h0
-        # the shape of the dieenstate is (num_hidden_layers, batch_size, number_of_nodes_in_hidden layer)
-        # if we are using LSTM then along with the hidden state we have to initialize the cell state
-        # c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        # LSTM have both the cell state and the hidden state
+        # we are doing number of hidden layers*2 because we are going in both the directions
+        h0 = torch.zeros(self.num_layers*2, x.size(0), self.hidden_size) # the shape of the hidden state is [num_layers*2, batch_size, nodes_in_hiddenLayer]
+        c0 = torch.zeros(self.num_layers*2, x.size(0), self.hidden_size)
 
-        # forward prop
-        # _ is the nth hidden state
-        # for LSTM we will do the forward prop as follows
-        # out, (hn, cn) = self,lstm(x, (h0, c0))
-        # no changes are required if you will be using GRU
-        out,_ = self.rnn(x, h0)
-        out = out.reshape(out.shape[0], -1)
-        # if we plan to use only last hidden state insted of using all the hidden states
-        # out = self.fc(out[:,-1,:]) # meaning we are taking out[all the batches, the last hidden state, all the features associated with the last hidden state]
-        # if we take only the last hidden state then we have to change our Linear layer in model initialiation: nn.Linear(hidden_sizes, num_classes)
-        out = self.fc(out)
+        out, (hn, cn) = self.lstm(x, (h0, c0))
+        out = self.fc(out[:,-1,:])
         return out
 
 # setting the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # initializing the model
-model = RNN(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
+model = BiLSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
 num_classes=num_classes).to(device)
 
 # load dataset
