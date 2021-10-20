@@ -46,8 +46,16 @@ lossCE = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Train Network
-for epoch in range(num_epochs):
-    for batch_idx, (data, targets) in enumerate(train_dataloader):
+for epoch in range(1, num_epochs+1):
+    train_loss = 0
+    test_loss = 0
+
+    # to specify that the model is in training mode
+    model.train()
+    # parameters for calculating accuracy
+    num_correct = 0; num_samples = 0
+    for batch_idx, (data, targets) in enumerate(train_dataloader, start=1):
+        optimizer.zero_grad()
         # get data to cuda if possible
         data = data.to(device)
         targets = targets.to(device)
@@ -59,32 +67,40 @@ for epoch in range(num_epochs):
         logits = model(data)
         #loss computation
         loss = lossCE(logits, targets)
-
+        # computation of training loss
+        train_loss += (loss.item() - train_loss) / batch_idx
+        # computation of training accuracy
+        _,predictions = logits.max(1)
+        num_correct += (predictions == targets).sum()
+        num_samples += predictions.size(0)
         # gradient computation in back prop
-        optimizer.zero_grad()
         loss.backward()
 
         # weight update
         optimizer.step()
+    # computing the accuracy
+    train_accuracy = (num_correct/num_samples)*100
 
-def accuracy(loader, model):
-    num_correct = 0
-    num_samples = 0
-    # setting up the model in evaluation mode
+    # to specify that the model is in testing mode
     model.eval()
+    num_correct = 0; num_samples = 0
+    for batch_idx, (data, targets) in enumerate(test_dataloader, start=1):
+        # specifying not to compute the gradients
+        data = data.to(device)
+        targets = targets.to(device)
+        data = data.reshape(data.shape[0],-1)
+        
+        with torch.no_grad():
+            logits = model(data)
+        
+        loss = lossCE(logits, targets)
+        test_loss += (loss.item() - test_loss) / batch_idx
+        _,predictions = logits.max(1)
+        num_correct += (predictions == targets).sum()
+        num_samples += predictions.size(0)
+    test_accuracy = (num_correct/num_samples)*100
 
-    # Specifying not to compute the gradients
-    with torch.no_grad():
-        for x,y in loader:
-            x = x.to(device)
-            y= y.to(device)
-            x = x.reshape(x.shape[0],-1)
-
-            logits = model(x)
-            _,predictions = logits.max(1)
-            num_correct += (predictions == y).sum()
-            num_samples += predictions.size(0)
-        print(f"Accuracy: {(num_correct/num_samples)*100:.2f}")
-    model.train()
-accuracy(train_dataloader, model)
-accuracy(test_dataloader, model)
+    print(f"epoch: {epoch}")
+    print(f"Train Loss: {train_loss:.2f} | Test Loss: {test_loss:.2f}")
+    print(f"Train Accuracy: {train_accuracy:.2f} | Test Accuracy {test_accuracy:.2f}")
+    print("-------------------------------------------------------------------------")
