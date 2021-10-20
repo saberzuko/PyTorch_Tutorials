@@ -55,7 +55,6 @@ for epoch in range(1, num_epochs+1):
     # parameters for calculating accuracy
     num_correct = 0; num_samples = 0
     for batch_idx, (data, targets) in enumerate(train_dataloader, start=1):
-        optimizer.zero_grad()
         # get data to cuda if possible
         data = data.to(device)
         targets = targets.to(device)
@@ -74,6 +73,10 @@ for epoch in range(1, num_epochs+1):
         num_correct += (predictions == targets).sum()
         num_samples += predictions.size(0)
         # gradient computation in back prop
+        # optimizer.zero_grad() tells to do the weight update based on
+        # the gradients calculated in th current batch and not to accumlate the gradients
+        # over the previous batches
+        optimizer.zero_grad()
         loss.backward()
 
         # weight update
